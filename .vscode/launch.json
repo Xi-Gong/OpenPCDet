@@ -1,0 +1,35 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Create KITTI Infos",
+            "type": "python",
+            "request": "launch",
+            "module": "pcdet.datasets.kitti.kitti_dataset",
+            "args": [
+                "create_kitti_infos",
+                "tools/cfgs/dataset_configs/kitti_dataset.yaml"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Train Model with PointPillar",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/train.py",
+            "args": [
+                "--cfg_file", "cfgs/kitti_models/pointpillar.yaml",
+                "--batch_size", "6",
+                "--workers", "8",
+                "--epochs", "160"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/tools"
+        }                        
+    ]
+}
