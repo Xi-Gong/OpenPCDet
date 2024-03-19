@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Create KITTI Infos",
+            "name": "Create KITTI Infos",
             "type": "python",
             "request": "launch",
             "module": "pcdet.datasets.kitti.kitti_dataset",
@@ -17,7 +17,7 @@
             "justMyCode": true
         },
         {
-            "name": "Python: Train PointPillar (train from scratch)",
+            "name": "Train PointPillar (train from scratch)",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/tools/train.py", // 为什么这里要指定绝对路径？不是已经在tools目录下了吗？
@@ -32,7 +32,22 @@
             "cwd": "${workspaceFolder}/tools"
         },
         {
-            "name": "Python: Train PointPillar (start from epoch 160)",
+            "name": "Train PointPillar (train from scratch, ped and cyc)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/train.py",
+            "args": [
+                "--cfg_file", "cfgs/kitti_models/pointpillar_pedcyc.yaml",
+                "--batch_size", "4",
+                "--workers", "4",
+                "--epochs", "80",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/tools"
+        },
+        {
+            "name": "Train PointPillar (start from epoch 160)",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/tools/train.py",
@@ -48,7 +63,7 @@
             "cwd": "${workspaceFolder}/tools"
         },
         {
-            "name": "Python: Test PointPillar with pseudo LiDAR model",
+            "name": "Test PointPillar with pseudo LiDAR model",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/tools/test.py",
@@ -64,7 +79,7 @@
             "cwd": "${workspaceFolder}/tools"
         },
         {
-            "name": "Python: Test PointPillar with original LiDAR model",
+            "name": "Test PointPillar with original LiDAR model",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/tools/test.py",
