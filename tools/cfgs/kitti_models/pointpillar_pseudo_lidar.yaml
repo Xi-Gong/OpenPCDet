@@ -2,7 +2,7 @@ CLASS_NAMES: ['Car', 'Pedestrian', 'Cyclist']
 
 DATA_CONFIG: 
     _BASE_CONFIG_: cfgs/dataset_configs/kitti_dataset.yaml
-    POINT_CLOUD_RANGE: [0, -40, -3, 70, 40, 1]  # Slightly adjusted to ensure coverage of the area where pedestrians and cyclists are likely to be found
+    POINT_CLOUD_RANGE: [0, -39.68, -1, 69.12, 39.68, 1]  # adjust to [-1, 1] to match VOXEL_SIZE z height 2
     DATA_PROCESSOR:
         - NAME: mask_points_and_boxes_outside_range
           REMOVE_OUTSIDE_BOXES: True
@@ -15,9 +15,9 @@ DATA_CONFIG:
 
         - NAME: transform_points_to_voxels
           VOXEL_SIZE: [0.08, 0.08, 2]  # Reduced voxel size for higher resolution
-          MAX_POINTS_PER_VOXEL: 20  # Adjusted for a balance between detail capture and computational efficiency
+          MAX_POINTS_PER_VOXEL: 16  # Adjusted for a balance between detail capture and computational efficiency
           MAX_NUMBER_OF_VOXELS: {
-            'train': 30000,  # Adjusted for the reduced voxel size
+            'train': 30000,  # Adjusted for the reduced voxel size, will increase cuda memory usage
             'test': 40000
           }
     DATA_AUGMENTOR:
@@ -65,9 +65,11 @@ MODEL:
         NAME: BaseBEVBackbone
         LAYER_NUMS: [3, 5, 5]
         LAYER_STRIDES: [2, 2, 2]
-        NUM_FILTERS: [96, 192, 384]  # 增加特征图通道数以增强特征提取能力
+        # NUM_FILTERS: [96, 192, 384]  # 增加特征图通道数以增强特征提取能力，会消耗更多显存
+        NUM_FILTERS: [64, 128, 256]
         UPSAMPLE_STRIDES: [1, 2, 4]
-        NUM_UPSAMPLE_FILTERS: [192, 192, 192]  # 同样增加上采样过滤器的数量以匹配主干网络的输出
+        # NUM_UPSAMPLE_FILTERS: [192, 192, 192]  # 同样增加上采样过滤器的数量以匹配主干网络的输出
+        NUM_UPSAMPLE_FILTERS: [128, 128, 128]
 
     DENSE_HEAD:
         NAME: AnchorHeadSingle
@@ -143,7 +145,7 @@ MODEL:
 
 
 OPTIMIZATION:
-    BATCH_SIZE_PER_GPU: 4
+    BATCH_SIZE_PER_GPU: 2
     NUM_EPOCHS: 80
 
     OPTIMIZER: adam_onecycle
