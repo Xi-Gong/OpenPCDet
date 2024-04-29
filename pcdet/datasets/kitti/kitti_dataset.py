@@ -149,9 +149,17 @@ class KittiDataset(DatasetTemplate):
 
     def get_infos(self, num_workers=4, has_label=True, count_inside_pts=True, sample_id_list=None):
         import concurrent.futures as futures
+        import threading
+
+        # 创建一个锁对象
+        print_lock = threading.Lock()
+
+        def safe_print(*args, **kwargs):
+            with print_lock:
+                print(*args, **kwargs)
 
         def process_single_scene(sample_idx):
-            print('%s sample_idx: %s' % (self.split, sample_idx))
+            safe_print('%s sample_idx: %s' % (self.split, sample_idx))
             info = {}
             pc_info = {'num_features': 4, 'lidar_idx': sample_idx}
             info['point_cloud'] = pc_info
@@ -216,7 +224,17 @@ class KittiDataset(DatasetTemplate):
 
             return info
 
+        def print_sample_id_list(sample_id_list):
+            # 打印列表长度
+            print("Length of sample_id_list:", len(sample_id_list))
+            # 打印所有元素，显示索引和值
+            for idx, sample_id in enumerate(sample_id_list):
+                print(f"Index {idx}: {sample_id}")
+
         sample_id_list = sample_id_list if sample_id_list is not None else self.sample_id_list
+
+        # print_sample_id_list(sample_id_list)
+
         with futures.ThreadPoolExecutor(num_workers) as executor:
             infos = executor.map(process_single_scene, sample_id_list)
         return list(infos)
