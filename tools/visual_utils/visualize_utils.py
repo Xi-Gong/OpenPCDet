@@ -2,6 +2,10 @@ import mayavi.mlab as mlab
 import numpy as np
 import torch
 
+import cv2
+import os
+import pcdet.utils.box_utils as box_utils
+
 box_colormap = [
     [1, 1, 1],
     [0, 1, 0],
@@ -213,3 +217,83 @@ def draw_corners3d(corners3d, fig, color=(1, 1, 1), line_width=2, cls=None, tag=
                     line_width=line_width, figure=fig)
 
     return fig
+
+def draw_3d_bboxes_on_image(image, corners_in_image, gt_corners_in_image, output_path, thickness=2):
+    """
+    在图像上绘制3D框的2D投影，并将图像保存到指定路径。
+    
+    :param image: 输入的图像 (H, W, 3) 格式的 numpy 数组
+    :param corners_in_image: 形状为 (N, 8, 2) 的 3D 框的 2D 投影点
+    :param output_path: 图像保存的路径
+    :param colors: 颜色列表，包含每个框的颜色 (B, G, R) 格式
+    """
+    
+    # 绘制检测结果对应的绿色3D候选框
+    for corners in corners_in_image:
+        corners = corners.astype(np.int32)
+        # 绘制3D框的12条边
+        for i in range(4):
+            cv2.line(image, tuple(corners[i]), tuple(corners[(i + 1) % 4]), (0, 255, 0), thickness)  # 底面
+            cv2.line(image, tuple(corners[i + 4]), tuple(corners[(i + 1) % 4 + 4]), (0, 255, 0), thickness)  # 顶面
+            cv2.line(image, tuple(corners[i]), tuple(corners[i + 4]), (0, 255, 0), thickness)  # 侧面
+
+    # 绘制真值对应的红色3D候选框
+    for corners in gt_corners_in_image:
+        corners = corners.astype(np.int32)
+        # 绘制3D框的12条边
+        for i in range(4):
+            cv2.line(image, tuple(corners[i]), tuple(corners[(i + 1) % 4]), (0, 0, 255), thickness)  # 底面
+            cv2.line(image, tuple(corners[i + 4]), tuple(corners[(i + 1) % 4 + 4]), (0, 0, 255), thickness)  # 顶面
+            cv2.line(image, tuple(corners[i]), tuple(corners[i + 4]), (0, 0, 255), thickness)  # 侧面
+
+    # 保存图像
+    cv2.imwrite(output_path, image)
+
+def draw_on_image(batch_dict, annos):
+    """
+    绘制场景图像并在图像上绘制3D检测框和真值框。
+
+    参数:
+    batch_dict (dict): 包含批处理数据的字典，包含以下键：
+        - 'batch_size' (int): 批处理的大小，即图像的数量。
+        - 'images' (list): 包含每张图像的张量列表，每个张量的形状为 (C, H, W)。
+        - 'gt_corners_in_image' (list): 包含每张图像中真值3D框角点坐标的列表，每个元素是一个形状为 (N, 8, 2) 的张量，N是框的数量。
+        - 'frame_id' (list): 包含每张图像对应的帧ID的列表。
+        
+    annos (list): 包含每帧注释信息的字典列表，包含以下键：
+        - 'frame_id' (str): 帧的唯一标识符。
+        - 'corners_in_image' (ndarray): 3D框角点在图像中的坐标数组，形状为 (N, 8, 2)，N是框的数量。如果该帧没有角点数据，可能不存在此键。
+
+    返回值:
+    无返回值。该函数在指定路径保存每张图像上绘制了3D框的结果。
+    """
+    for i in range(batch_dict['batch_size']):
+        # 某些帧可能是空的，尚不知其原因，需要提前检查下
+        corners_in_image = annos[i].get('corners_in_image', None)
+        if corners_in_image is None:
+            print("empty frame: " + annos[i]['frame_id'])
+            continue
+        # corners_in_image = annos[i]['corners_in_image']
+        image = batch_dict['images'][i]
+        gt_corners_in_image = batch_dict['gt_corners_in_image'][i]
+        gt_corners_in_image = gt_corners_in_image.cpu().numpy() # 先转成numpy格式，方便后续处理
+
+        # convert to opencv format
+        image_np = image.cpu().numpy()
+        image_np = np.transpose(image_np, (1, 2, 0)) # 从PyTorch的(C, H, W)格式转换为OpenCV的(H, W, C)格式
+        image_np = (image_np * 255).astype(np.uint8)
+        image_bgr = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
+        
+        # construct output path
+        prefix = '/media/gx/tmp/OpenPCDet/data/kitti/training/2d_visualize/'
+        os.makedirs(prefix, exist_ok=True)  # 确保目录存在
+        output_path = os.path.join(prefix, '{}.png'.format(batch_dict['frame_id'][i]))
+        
+        # 在图像上绘制检测结果对应的绿色3D候选框和真值对应的红色3D候选框
+        draw_3d_bboxes_on_image(image_bgr, corners_in_image, gt_corners_in_image, output_path)
+
+# def draw_2d_bboxes_on_image(image, bboxes, output_path):
+#     for bbox in bboxes:
+#         x1, y1, x2, y2 = bbox.astype(int)
+#         cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+#     cv2.imwrite(output_path, image)
