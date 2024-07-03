@@ -61,10 +61,15 @@ def draw_3d_bboxes_on_image(image, corners_in_image, gt_corners_in_image, output
 
 def draw_scenes(batch_dict, annos):
     for i in range(batch_dict['batch_size']):
-        corners_in_image = annos[i]['corners_in_image']
+        # 某些帧可能是空的，尚不知其原因，需要提前检查下
+        corners_in_image = annos[i].get('corners_in_image', None)
+        if corners_in_image is None:
+            print("empty frame: " + annos[i]['frame_id'])
+            continue
+        # corners_in_image = annos[i]['corners_in_image']
         image = batch_dict['images'][i]
         gt_corners_in_image = batch_dict['gt_corners_in_image'][i]
-        gt_corners_in_image = gt_corners_in_image.cpu().numpy() # 先转成numpy格式
+        gt_corners_in_image = gt_corners_in_image.cpu().numpy() # 先转成numpy格式，方便后续处理
 
         # convert to opencv format
         image_np = image.cpu().numpy()
