@@ -28,7 +28,7 @@ def statistics_info(cfg, ret_dict, metric, disp_dict):
 #         cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
 #     cv2.imwrite(output_path, image)
 
-def draw_3d_bboxes_on_image(image, corners_in_image, gt_corners_in_image, output_path, thickness = 2):
+def draw_3d_bboxes_on_image(image, corners_in_image, gt_corners_in_image, output_path, thickness=2):
     """
     在图像上绘制3D框的2D投影，并将图像保存到指定路径。
     
@@ -49,8 +49,7 @@ def draw_3d_bboxes_on_image(image, corners_in_image, gt_corners_in_image, output
 
     # 绘制真值对应的红色3D候选框
     for corners in gt_corners_in_image:
-        corners = corners.cpu().numpy().astype(np.int32)  # 先转成numpy格式，再转成int32
-        # corners = corners.to(torch.int32) # torch变量
+        corners = corners.astype(np.int32)
         # 绘制3D框的12条边
         for i in range(4):
             cv2.line(image, tuple(corners[i]), tuple(corners[(i + 1) % 4]), (0, 0, 255), thickness)  # 底面
@@ -65,6 +64,7 @@ def draw_scenes(batch_dict, annos):
         corners_in_image = annos[i]['corners_in_image']
         image = batch_dict['images'][i]
         gt_corners_in_image = batch_dict['gt_corners_in_image'][i]
+        gt_corners_in_image = gt_corners_in_image.cpu().numpy() # 先转成numpy格式
 
         # convert to opencv format
         image_np = image.cpu().numpy()
