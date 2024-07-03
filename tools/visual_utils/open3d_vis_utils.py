@@ -7,6 +7,7 @@ import open3d
 import torch
 import matplotlib
 import numpy as np
+import keyboard
 
 box_colormap = [
     [1, 1, 1],
@@ -35,7 +36,7 @@ def get_coor_colors(obj_labels):
     return label_rgba
 
 
-def draw_scenes(points, gt_boxes=None, ref_boxes=None, ref_labels=None, ref_scores=None, point_colors=None, draw_origin=True):
+def draw_scenes(points, gt_boxes=None, ref_boxes=None, ref_labels=None, ref_scores=None, point_colors=None, draw_origin=True, filename=None):
     if isinstance(points, torch.Tensor):
         points = points.cpu().numpy()
     if isinstance(gt_boxes, torch.Tensor):
@@ -70,6 +71,13 @@ def draw_scenes(points, gt_boxes=None, ref_boxes=None, ref_labels=None, ref_scor
         vis = draw_box(vis, ref_boxes, (0, 1, 0), ref_labels, ref_scores)
 
     vis.run()
+
+    # 额外添加保存结果功能，在关闭可视化窗口时保存
+    if filename is not None:
+        vis.poll_events()
+        vis.update_renderer()
+        vis.capture_screen_image(filename)
+
     vis.destroy_window()
 
 

@@ -79,20 +79,36 @@
             "cwd": "${workspaceFolder}/tools"
         },
         {
-            "name": "Test PointPillar with original LiDAR model",
+            "name": "Test PointPillar with original LiDAR model on test set",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/tools/test.py",
             "args": [
                 "--cfg_file", "cfgs/kitti_models/pointpillar.yaml",
                 "--ckpt", "../checkpoints/pointpillar_7728.pth",
-                "--batch_size", "2",
+                "--batch_size", "4",
                 "--workers", "4",
                 "--infer_time"
             ],
             "console": "integratedTerminal",
             "justMyCode": true,
             "cwd": "${workspaceFolder}/tools"
-        }                        
+        },
+        {
+            "name": "visualize PointRCNN detection result",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/demo.py",
+            "args": [
+                "--cfg_file", "cfgs/kitti_models/pointrcnn.yaml",
+                "--ckpt", "../checkpoints/pointrcnn_7870.pth",
+                "--data_path", "../data/kitti/training/velodyne/000266.bin",
+                "--pkl", "../data/kitti/kitti_infos_val.pkl",
+                "--idx", "122"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/tools"
+        }                                
     ]
 }

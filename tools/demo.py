@@ -1,9 +1,11 @@
 import argparse
+from ast import arg
 import glob
+import pickle
 from pathlib import Path
 
 try:
-    import open3d
+    import open3d as o3d
     from visual_utils import open3d_vis_utils as V
     OPEN3D_FLAG = True
 except:
@@ -18,6 +20,7 @@ from pcdet.config import cfg, cfg_from_yaml_file
 from pcdet.datasets import DatasetTemplate
 from pcdet.models import build_network, load_data_to_gpu
 from pcdet.utils import common_utils
+import pcdet.utils.box_utils as box_utils
 
 
 class DemoDataset(DatasetTemplate):
@@ -68,13 +71,15 @@ def parse_config():
                         help='specify the point cloud data file or directory')
     parser.add_argument('--ckpt', type=str, default=None, help='specify the pretrained model')
     parser.add_argument('--ext', type=str, default='.bin', help='specify the extension of your point cloud data file')
+    parser.add_argument('--pkl', type=str, default="../data/kitti/kitti_infos_val.pkl", help='data_path corresponding pickle file')
+    parser.add_argument('--idx', type=int, default=0, help='relative index in pickle file')
 
     args = parser.parse_args()
 
     cfg_from_yaml_file(args.cfg_file, cfg)
 
     return args, cfg
-
+    
 
 def main():
     args, cfg = parse_config()
@@ -97,9 +102,22 @@ def main():
             load_data_to_gpu(data_dict)
             pred_dicts, _ = model.forward(data_dict)
 
+            # annos = demo_dataset.generate_prediction_dicts(
+            #     data_dict, pred_dicts, demo_dataset.class_names,
+            # )
+
+            # visualize in 3d point cloud
+            with open(args.pkl, 'rb') as f:
+                infos = pickle.load(f)
+
+            info = infos[args.idx]
+            annos = info['annos']
+            gt_boxes = annos['gt_boxes_lidar']
+
             V.draw_scenes(
-                points=data_dict['points'][:, 1:], ref_boxes=pred_dicts[0]['pred_boxes'],
-                ref_scores=pred_dicts[0]['pred_scores'], ref_labels=pred_dicts[0]['pred_labels']
+                points=data_dict['points'][:, 1:], gt_boxes=gt_boxes,
+                ref_boxes=pred_dicts[0]['pred_boxes'], ref_scores=pred_dicts[0]['pred_scores'], 
+                ref_labels=pred_dicts[0]['pred_labels'], filename=f'output_{idx + 1}.png'
             )
 
             if not OPEN3D_FLAG:

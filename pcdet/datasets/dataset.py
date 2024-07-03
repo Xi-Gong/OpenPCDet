@@ -271,6 +271,14 @@ class DatasetTemplate(torch_data.Dataset):
                         if val[k].size > 0:
                             batch_boxes2d[k, :val[k].__len__(), :] = val[k]
                     ret[key] = batch_boxes2d
+
+                elif key in ['gt_corners_in_image']:    # for visualization
+                    max_boxes = max([val[i].shape[0] for i in range(len(val))])
+                    batch_corners_in_image = np.zeros((batch_size, max_boxes, val[0].shape[1], val[0].shape[2]), dtype=np.float32)
+                    for k in range(batch_size):
+                        batch_corners_in_image[k, :val[k].shape[0], :, :] = val[k]
+                    ret[key] = batch_corners_in_image
+
                 elif key in ["images", "depth_maps"]:
                     # Get largest image size (H, W)
                     max_h = 0

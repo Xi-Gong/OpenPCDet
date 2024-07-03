@@ -331,6 +331,11 @@ class KittiDataset(DatasetTemplate):
             pred_boxes_img = box_utils.boxes3d_kitti_camera_to_imageboxes(
                 pred_boxes_camera, calib, image_shape=image_shape
             )
+            
+            # compute corners_in_image for visualize
+            corners3d = box_utils.boxes3d_to_corners3d_kitti_camera(pred_boxes_camera)
+            pts_img, _ = calib.rect_to_img(corners3d.reshape(-1, 3))
+            corners_in_image = pts_img.reshape(-1, 8, 2)
 
             pred_dict['name'] = np.array(class_names)[pred_labels - 1]
             pred_dict['alpha'] = -np.arctan2(-pred_boxes[:, 1], pred_boxes[:, 0]) + pred_boxes_camera[:, 6]
@@ -340,6 +345,7 @@ class KittiDataset(DatasetTemplate):
             pred_dict['rotation_y'] = pred_boxes_camera[:, 6]
             pred_dict['score'] = pred_scores
             pred_dict['boxes_lidar'] = pred_boxes
+            pred_dict['corners_in_image'] = corners_in_image # add corners_in_image for visualize
 
             return pred_dict
 
@@ -411,9 +417,15 @@ class KittiDataset(DatasetTemplate):
             gt_boxes_camera = np.concatenate([loc, dims, rots[..., np.newaxis]], axis=1).astype(np.float32)
             gt_boxes_lidar = box_utils.boxes3d_kitti_camera_to_lidar(gt_boxes_camera, calib)
 
+            # for visualization
+            gt_corners3d = box_utils.boxes3d_to_corners3d_kitti_camera(gt_boxes_camera)
+            pts_img, _ = calib.rect_to_img(gt_corners3d.reshape(-1, 3))
+            gt_corners_in_image = pts_img.reshape(-1, 8, 2)
+
             input_dict.update({
                 'gt_names': gt_names,
-                'gt_boxes': gt_boxes_lidar
+                'gt_boxes': gt_boxes_lidar,
+                'gt_corners_in_image': gt_corners_in_image # for visualization
             })
             if "gt_boxes2d" in get_item_list:
                 input_dict['gt_boxes2d'] = annos["bbox"]

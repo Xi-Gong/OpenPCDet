@@ -4,6 +4,10 @@ import time
 import numpy as np
 import torch
 import tqdm
+import json
+import cv2
+import os
+import pcdet.utils.box_utils as box_utils
 
 from pcdet.models import load_data_to_gpu
 from pcdet.utils import common_utils
@@ -18,6 +22,63 @@ def statistics_info(cfg, ret_dict, metric, disp_dict):
     disp_dict['recall_%s' % str(min_thresh)] = \
         '(%d, %d) / %d' % (metric['recall_roi_%s' % str(min_thresh)], metric['recall_rcnn_%s' % str(min_thresh)], metric['gt_num'])
 
+# def draw_2d_bboxes_on_image(image, bboxes, output_path):
+#     for bbox in bboxes:
+#         x1, y1, x2, y2 = bbox.astype(int)
+#         cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+#     cv2.imwrite(output_path, image)
+
+def draw_3d_bboxes_on_image(image, corners_in_image, gt_corners_in_image, output_path, thickness = 2):
+    """
+    在图像上绘制3D框的2D投影，并将图像保存到指定路径。
+    
+    :param image: 输入的图像 (H, W, 3) 格式的 numpy 数组
+    :param corners_in_image: 形状为 (N, 8, 2) 的 3D 框的 2D 投影点
+    :param output_path: 图像保存的路径
+    :param colors: 颜色列表，包含每个框的颜色 (B, G, R) 格式
+    """
+    
+    # 绘制检测结果对应的绿色3D候选框
+    for corners in corners_in_image:
+        corners = corners.astype(np.int32)
+        # 绘制3D框的12条边
+        for i in range(4):
+            cv2.line(image, tuple(corners[i]), tuple(corners[(i + 1) % 4]), (0, 255, 0), thickness)  # 底面
+            cv2.line(image, tuple(corners[i + 4]), tuple(corners[(i + 1) % 4 + 4]), (0, 255, 0), thickness)  # 顶面
+            cv2.line(image, tuple(corners[i]), tuple(corners[i + 4]), (0, 255, 0), thickness)  # 侧面
+
+    # 绘制真值对应的红色3D候选框
+    for corners in gt_corners_in_image:
+        corners = corners.cpu().numpy().astype(np.int32)  # 先转成numpy格式，再转成int32
+        # corners = corners.to(torch.int32) # torch变量
+        # 绘制3D框的12条边
+        for i in range(4):
+            cv2.line(image, tuple(corners[i]), tuple(corners[(i + 1) % 4]), (0, 0, 255), thickness)  # 底面
+            cv2.line(image, tuple(corners[i + 4]), tuple(corners[(i + 1) % 4 + 4]), (0, 0, 255), thickness)  # 顶面
+            cv2.line(image, tuple(corners[i]), tuple(corners[i + 4]), (0, 0, 255), thickness)  # 侧面
+
+    # 保存图像
+    cv2.imwrite(output_path, image)
+
+def draw_scenes(batch_dict, annos):
+    for i in range(batch_dict['batch_size']):
+        corners_in_image = annos[i]['corners_in_image']
+        image = batch_dict['images'][i]
+        gt_corners_in_image = batch_dict['gt_corners_in_image'][i]
+
+        # convert to opencv format
+        image_np = image.cpu().numpy()
+        image_np = np.transpose(image_np, (1, 2, 0)) # 从PyTorch的(C, H, W)格式转换为OpenCV的(H, W, C)格式
+        image_np = (image_np * 255).astype(np.uint8)
+        image_bgr = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
+        
+        # construct output path
+        prefix = '/media/gx/tmp/OpenPCDet/data/kitti/training/2d_visualize/'
+        os.makedirs(prefix, exist_ok=True)  # 确保目录存在
+        output_path = os.path.join(prefix, '{}.png'.format(batch_dict['frame_id'][i]))
+        
+        # 在图像上绘制检测结果对应的绿色3D候选框和真值对应的红色3D候选框
+        draw_3d_bboxes_on_image(image_bgr, corners_in_image, gt_corners_in_image, output_path)
 
 def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=False, result_dir=None):
     result_dir.mkdir(parents=True, exist_ok=True)
@@ -55,6 +116,7 @@ def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=Fal
     if cfg.LOCAL_RANK == 0:
         progress_bar = tqdm.tqdm(total=len(dataloader), leave=True, desc='eval', dynamic_ncols=True)
     start_time = time.time()
+
     for i, batch_dict in enumerate(dataloader):
         load_data_to_gpu(batch_dict)
 
@@ -77,6 +139,10 @@ def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=Fal
             batch_dict, pred_dicts, class_names,
             output_path=final_output_dir if args.save_to_file else None
         )
+
+        # 在图像上绘制3D候选框
+        draw_scenes(batch_dict, annos)
+
         det_annos += annos
         if cfg.LOCAL_RANK == 0:
             progress_bar.set_postfix(disp_dict)
