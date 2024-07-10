@@ -332,7 +332,7 @@ class KittiDataset(DatasetTemplate):
                 pred_boxes_camera, calib, image_shape=image_shape
             )
             
-            # compute corners_in_image for visualize
+            # compute corners_in_image for visualization
             corners3d = box_utils.boxes3d_to_corners3d_kitti_camera(pred_boxes_camera)
             pts_img, _ = calib.rect_to_img(corners3d.reshape(-1, 3))
             corners_in_image = pts_img.reshape(-1, 8, 2)
@@ -345,7 +345,7 @@ class KittiDataset(DatasetTemplate):
             pred_dict['rotation_y'] = pred_boxes_camera[:, 6]
             pred_dict['score'] = pred_scores
             pred_dict['boxes_lidar'] = pred_boxes
-            pred_dict['corners_in_image'] = corners_in_image # add corners_in_image for visualize
+            pred_dict['corners_in_image'] = corners_in_image # add corners_in_image for visualization
 
             return pred_dict
 
