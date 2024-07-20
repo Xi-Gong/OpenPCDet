@@ -1,4 +1,4 @@
-import mayavi.mlab as mlab
+# import mayavi.mlab as mlab
 import numpy as np
 import torch
 
@@ -249,6 +249,27 @@ def draw_3d_bboxes_on_image(image, corners_in_image, gt_corners_in_image, output
     # 保存图像
     cv2.imwrite(output_path, image)
 
+def filter_boxes(name, score):
+    invalid_names = []
+    keep = []
+
+    for name, score in zip(name, score):
+        if name == 'Car' and score > 0.7:
+            keep.append(True)
+        elif (name == 'Pedestrian' or name == 'Cyclist') and score > 0.5:
+            keep.append(True)
+        else:
+            keep.append(False)
+
+        if name not in ['Car', 'Pedestrian', 'Cyclist']:
+            invalid_names.append(name)
+
+    keep = np.array(keep)
+    if invalid_names:
+        print("Invalid name detected:", invalid_names)
+
+    return keep
+
 def draw_on_image(batch_dict, annos):
     """
     绘制场景图像并在图像上绘制3D检测框和真值框。
@@ -270,9 +291,12 @@ def draw_on_image(batch_dict, annos):
     for i in range(batch_dict['batch_size']):
         # 某些帧可能是空的，尚不知其原因，需要提前检查下
         corners_in_image = annos[i].get('corners_in_image', None)
-        if corners_in_image is None:
+        name = annos[i].get('name', None)
+        score = annos[i].get('score', None)
+        if any(x is None for x in [corners_in_image, name, score]):
             print("empty frame: " + annos[i]['frame_id'])
             continue
+        
         # corners_in_image = annos[i]['corners_in_image']
         image = batch_dict['images'][i]
         gt_corners_in_image = batch_dict['gt_corners_in_image'][i]
@@ -288,6 +312,10 @@ def draw_on_image(batch_dict, annos):
         prefix = '/media/gx/tmp/OpenPCDet/data/kitti/training/2d_visualize/'
         os.makedirs(prefix, exist_ok=True)  # 确保目录存在
         output_path = os.path.join(prefix, '{}.png'.format(batch_dict['frame_id'][i]))
+
+        # 过滤corners_in_image
+        keep = filter_boxes(name, score)
+        corners_in_image = corners_in_image[keep]
         
         # 在图像上绘制检测结果对应的绿色3D候选框和真值对应的红色3D候选框
         draw_3d_bboxes_on_image(image_bgr, corners_in_image, gt_corners_in_image, output_path)

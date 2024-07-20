@@ -8,7 +8,7 @@ import json
 
 from pcdet.models import load_data_to_gpu
 from pcdet.utils import common_utils
-from ..visual_utils.visualize_utils import draw_on_image
+from tools.visual_utils.visualize_utils import draw_on_image
 
 
 def statistics_info(cfg, ret_dict, metric, disp_dict):

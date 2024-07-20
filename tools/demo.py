@@ -114,6 +114,7 @@ def main():
             annos = info['annos']
             gt_boxes = annos['gt_boxes_lidar']
 
+            # 需要按照置信度筛选候选框，不满足置信度阈值的候选框不予绘制
             V.draw_scenes(
                 points=data_dict['points'][:, 1:], gt_boxes=gt_boxes,
                 ref_boxes=pred_dicts[0]['pred_boxes'], ref_scores=pred_dicts[0]['pred_scores'], 

@@ -11,9 +11,9 @@ import keyboard
 
 box_colormap = [
     [1, 1, 1],
-    [0, 1, 0],
-    [0, 1, 1],
-    [1, 1, 0],
+    [0, 1, 0], # Car
+    [0, 1, 1], # Pedestrian
+    [1, 1, 0], # Cyclist
 ]
 
 
@@ -43,6 +43,41 @@ def draw_scenes(points, gt_boxes=None, ref_boxes=None, ref_labels=None, ref_scor
         gt_boxes = gt_boxes.cpu().numpy()
     if isinstance(ref_boxes, torch.Tensor):
         ref_boxes = ref_boxes.cpu().numpy()
+
+    # 需要debug查看ref_labels和ref_scores的内容
+    if isinstance(ref_labels, torch.Tensor):
+        ref_labels = ref_labels.cpu().numpy()
+    if isinstance(ref_scores, torch.Tensor):
+        ref_scores = ref_scores.cpu().numpy()
+
+    def filter_boxes(ref_labels, ref_scores, ref_boxes):
+        invalid_labels = []
+        keep = []
+
+        for label, score in zip(ref_labels, ref_scores):
+            if label == 1 and score > 0.7:
+                keep.append(True)
+            elif (label == 2 or label == 3) and score > 0.5:
+                keep.append(True)
+            else:
+                keep.append(False)
+
+            if label not in [1, 2, 3]:
+                invalid_labels.append(label)
+
+        keep = np.array(keep)
+        if invalid_labels:
+            print("Invalid ref_labels detected:", invalid_labels)
+
+        return ref_boxes[keep], ref_labels[keep], ref_scores[keep]
+
+    # 过滤 ref_boxes, ref_labels 和 ref_scores
+    if ref_boxes is not None and ref_labels is not None and ref_scores is not None:
+        ref_boxes, ref_labels, ref_scores = filter_boxes(ref_labels, ref_scores, ref_boxes)
+
+    print("ref_boxes: " + str(ref_boxes) + "\n")
+    print("ref_labels: " + str(ref_labels) + "\n")
+    print("ref_scores: " + str(ref_scores) + "\n")
 
     vis = open3d.visualization.Visualizer()
     vis.create_window()
